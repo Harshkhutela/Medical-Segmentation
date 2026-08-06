@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python cache
+.pytest_cache/
+.mypy_cache/
+.cache/
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# Model checkpoints
+checkpoints/
+
+# Generated outputs
+outputs/
+logs/
+
+# Streamlit cache
+.streamlit/
+
+# Dataset (very large files)
+dataset/images/
+dataset/masks/
+dataset/train/
+dataset/val/
+dataset/unlabeled/
+dataset/pseudo_masks/
+dataset/retraining/
+
+# Environment
+.env
+.env.*
+
+# Jupyter
+.ipynb_checkpoints/
