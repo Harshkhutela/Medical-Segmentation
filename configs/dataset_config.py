@@ -6,6 +6,8 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+import torch
+
 from configs.config import BASE_DIR, BATCH_SIZE, CHANNELS, IMAGE_SIZE, OUTPUT_PATH
 
 
@@ -120,7 +122,8 @@ class DatasetConfiguration:
         if train_ratio <= 0 or val_ratio <= 0 or train_ratio + val_ratio > 1.0:
             train_ratio, val_ratio = 0.8, 0.2
 
-        num_workers = _get_env_int("MEDSEG_NUM_WORKERS", max((os.cpu_count() or 2) - 1, 1))
+        num_workers = _get_env_int("MEDSEG_NUM_WORKERS", 2)
+        pin_memory = torch.cuda.is_available()
 
         return cls(
             dataset_root=dataset_root,
@@ -132,7 +135,7 @@ class DatasetConfiguration:
             val_ratio=val_ratio,
             num_workers=max(num_workers, 0),
             cache_images=_get_env_bool("MEDSEG_CACHE_IMAGES", False),
-            pin_memory=_get_env_bool("MEDSEG_PIN_MEMORY", True),
+            pin_memory=pin_memory,
             seed=_get_env_int("MEDSEG_SPLIT_SEED", 42),
             auto_split=_get_env_bool("MEDSEG_AUTO_SPLIT", True),
             early_stopping_patience=_get_env_int("MEDSEG_EARLY_STOPPING", 5),

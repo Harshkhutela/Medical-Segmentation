@@ -8,7 +8,7 @@ import pandas as pd
 import streamlit as st
 
 from benchmarking import BENCHMARK_PLOTS_DIR, load_benchmark_results, run_benchmark
-from .ui import render_section_header
+from .ui import info_tooltip, render_section_header
 
 
 def _format_metric(value: float | int | None) -> str:
@@ -34,6 +34,20 @@ def render_benchmark_page() -> None:
         unsafe_allow_html=True,
     )
 
+    info_tooltip(
+        "bench_overview_info",
+        "Benchmark",
+        "The benchmark page compares the trained U-Net model against simple baseline "
+        "predictors (e.g. all-zero dummy predictor, random predictor) using standard "
+        "segmentation metrics. This helps validate that the trained model performs "
+        "significantly better than trivial approaches.",
+        "In medical research, it's not enough to say 'the AI got a 90% score'. You have to prove "
+        "that the AI is actually smart, and not just cheating. For example, if 90% of a brain scan "
+        "is healthy background tissue, a 'dummy' AI could just guess 'healthy' for every single pixel "
+        "and get a 90% accuracy score without learning anything! Benchmarking puts our real AI "
+        "head-to-head against these 'dummy' models to prove that our AI's high scores are genuine."
+    )
+
     left, right = st.columns([0.7, 0.3], gap="large")
     with left:
         st.write(
@@ -42,6 +56,15 @@ def render_benchmark_page() -> None:
         )
     with right:
         run_button = st.button("Run Benchmark", use_container_width=True)
+        info_tooltip(
+            "bench_run_info",
+            "Run Benchmark",
+            "Click to execute the benchmark suite. This runs the trained model and "
+            "baseline predictors on the validation dataset and computes comparison "
+            "metrics. Results are saved for future viewing.",
+            "This button forces a fresh race between our AI and the baseline models on the "
+            "validation dataset to ensure all the comparison numbers are perfectly up to date."
+        )
 
     frame = pd.DataFrame()
     if run_button:
@@ -73,8 +96,32 @@ def render_benchmark_page() -> None:
     with summary_cards[4]:
         st.metric("Best F1", _format_metric(best_row.get("f1")))
 
+    info_tooltip(
+        "bench_summary_info",
+        "Comparison Metrics",
+        "<strong>Dice, IoU, Precision, Recall, F1</strong> — Standard segmentation "
+        "evaluation metrics computed on the validation set. The 'best' values shown "
+        "are from the highest-performing model (which should be the trained U-Net). "
+        "Comparing against baselines validates that the model has learned meaningful "
+        "features rather than producing trivial outputs.",
+        "These metrics are the final scoreboard of the race. We expect our Trained U-Net to "
+        "completely crush the Dummy and Random models across all categories. If it doesn't, "
+        "it means our AI hasn't learned the complex patterns of tumors and is relying on a "
+        "lazy shortcut."
+    )
+
     render_section_header("Comparison Table")
     st.dataframe(frame, use_container_width=True, hide_index=True)
+    info_tooltip(
+        "bench_table_info",
+        "Comparison Table",
+        "Each row represents a different model or predictor. The trained U-Net "
+        "should outperform the baseline predictors across all metrics.",
+        "The detailed breakdown of how each model performed. You will see that models guessing "
+        "'All Zeros' might have decent accuracy, but will score a total 0 on 'Recall' because they "
+        "failed to find a single tumor. This proves why we look at multiple different scores instead "
+        "of just 'Accuracy'."
+    )
 
     render_section_header("Benchmark Charts")
     for metric in ["dice", "iou", "precision", "recall", "f1"]:

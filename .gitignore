@@ -51,3 +51,7 @@ dataset/retraining/
 
 # Jupyter
 .ipynb_checkpoints/
+
+
+datasets/
+dataset/
