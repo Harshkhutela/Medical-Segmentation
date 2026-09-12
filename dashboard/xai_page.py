@@ -11,7 +11,7 @@ from PIL import Image
 from configs.config import OUTPUT_PATH
 from xai.utils import load_xai_model, run_xai_pipeline
 
-from .ui import info_tooltip, render_section_header
+from .ui import info_tooltip, render_section_header, safe_image
 
 
 @st.cache_resource(show_spinner=False)
@@ -185,17 +185,17 @@ def render_xai_page() -> None:
 
     top_row = st.columns(3)
     with top_row[0]:
-        st.image(result.original_image, caption="Original MRI", use_container_width=True)
+        safe_image(result.original_image, caption="Original MRI")
     with top_row[1]:
-        st.image(result.predicted_mask, caption="Predicted Mask", use_container_width=True)
+        safe_image(result.predicted_mask, caption="Predicted Mask")
     with top_row[2]:
-        st.image(result.heatmap_image, caption="Heatmap", use_container_width=True)
+        safe_image(result.heatmap_image, caption="Heatmap")
 
     bottom_row = st.columns(2)
     with bottom_row[0]:
-        st.image(result.overlay_image, caption="Overlay", use_container_width=True)
+        safe_image(result.overlay_image, caption="Overlay")
     with bottom_row[1]:
-        st.image(result.attention_image, caption="Attention Visualization", use_container_width=True)
+        safe_image(result.attention_image, caption="Attention Visualization")
 
     st.markdown(
         f"""

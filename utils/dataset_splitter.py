@@ -299,12 +299,14 @@ class CachedSegmentationDataset(Dataset):
         image_size: int | None = None,
         cache_images: bool = False,
         cache_limit: int | None = None,
+        augment: bool = False,
     ) -> None:
         """Create a wrapper around the existing medical segmentation dataset."""
         self.base_dataset = MedicalSegmentationDataset(
             image_folder=image_folder,
             mask_folder=mask_folder,
             image_size=image_size,
+            augment=augment,
         )
         self.cache_images = cache_images
         self.cache_limit = cache_limit
@@ -333,3 +335,9 @@ class CachedSegmentationDataset(Dataset):
 
         self._cache[index] = sample
         self._cache_order.append(index)
+
+    def _load_image(self, image_path):
+        return self.base_dataset._load_image(image_path)
+
+    def _load_mask(self, mask_path):
+        return self.base_dataset._load_mask(mask_path)

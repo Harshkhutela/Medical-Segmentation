@@ -26,6 +26,7 @@ from .ui import (
     info_tooltip,
     overlay_mask,
     render_section_header,
+    safe_image,
 )
 
 matplotlib.use("Agg")
@@ -591,7 +592,7 @@ def render_segmentation_page() -> None:
             "</div>",
             unsafe_allow_html=True,
         )
-        st.image(original_image, use_container_width=True)
+        safe_image(original_image)
         info_tooltip(
             "orig_info",
             "Original Image",
@@ -608,7 +609,7 @@ def render_segmentation_page() -> None:
             "</div>",
             unsafe_allow_html=True,
         )
-        st.image(prediction_image, use_container_width=True)
+        safe_image(prediction_image)
         info_tooltip(
             "mask_info",
             "Binary Predicted Mask",
@@ -628,7 +629,7 @@ def render_segmentation_page() -> None:
             "</div>",
             unsafe_allow_html=True,
         )
-        st.image(heatmap_image, use_container_width=True)
+        safe_image(heatmap_image)
         info_tooltip(
             "heatmap_info",
             "Probability Heatmap",
@@ -652,7 +653,7 @@ def render_segmentation_page() -> None:
             "</div>",
             unsafe_allow_html=True,
         )
-        st.image(overlay_image, use_container_width=True)
+        safe_image(overlay_image)
         info_tooltip(
             "overlay_info",
             "Overlay Visualization",
@@ -687,7 +688,7 @@ def render_segmentation_page() -> None:
         adjusted_overlay = overlay_mask(
             original_image, prediction_image, alpha=opacity_slider
         )
-        st.image(adjusted_overlay, caption="Adjusted Overlay", use_container_width=True)
+        safe_image(adjusted_overlay, caption="Adjusted Overlay")
 
     # --- Prediction Metrics ---
     render_section_header(
@@ -808,7 +809,7 @@ def render_segmentation_page() -> None:
                 thr_binary = (prob_np >= thr).astype(np.float32)
                 thr_fg = int(thr_binary.sum())
                 thr_img = binary_mask_to_pil(thr_binary[np.newaxis, ...])
-                st.image(thr_img, caption=f"t={thr:.2f}", use_container_width=True)
+                safe_image(thr_img, caption=f"t={thr:.2f}")
                 st.markdown(
                     f'<div style="text-align:center;font-size:0.78rem;color:#475569;">FG: {thr_fg:,}</div>',
                     unsafe_allow_html=True,
@@ -868,10 +869,10 @@ def render_segmentation_page() -> None:
         gt_col1, gt_col2 = st.columns(2)
         with gt_col1:
             gt_image = Image.open(str(ground_truth_path)).convert("L")
-            st.image(gt_image, caption="Ground Truth Mask", use_container_width=True)
+            safe_image(gt_image, caption="Ground Truth Mask")
         with gt_col2:
-            st.image(
-                prediction_image, caption="Predicted Mask", use_container_width=True
+            safe_image(
+                prediction_image, caption="Predicted Mask"
             )
 
     else:

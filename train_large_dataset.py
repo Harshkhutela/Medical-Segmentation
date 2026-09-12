@@ -59,6 +59,7 @@ def train_one_epoch(model, data_loader, optimizer, criterion, device, epoch, max
         logits = model(images)
         loss = criterion(logits, masks)
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
 
         total_loss += loss.item()
@@ -90,12 +91,14 @@ def prepare_datasets(config):
         mask_folder=split_paths.train_masks,
         image_size=config.image_size,
         cache_images=config.cache_images,
+        augment=True,
     )
     val_dataset = CachedSegmentationDataset(
         image_folder=split_paths.val_images,
         mask_folder=split_paths.val_masks,
         image_size=config.image_size,
         cache_images=config.cache_images,
+        augment=False,
     )
 
     return train_dataset, val_dataset
@@ -135,15 +138,15 @@ def main():
         shuffle=False,
     )
 
+    max_epochs = EPOCHS
     model = UNet(in_channels=config.channels).to(device)
-    optimizer = Adam(model.parameters(), lr=1e-3)
-    scheduler = ReduceLROnPlateau(
+    optimizer = torch.optim.AdamW(model.parameters(), lr=5e-4, weight_decay=1e-4)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer,
-        mode="max",
-        factor=config.scheduler_factor,
-        patience=config.scheduler_patience,
+        T_max=max_epochs,
+        eta_min=1e-6,
     )
-    criterion = BCEDiceLoss()
+    criterion = BCEDiceLoss(bce_weight=0.3, dice_weight=0.7)
 
     history_logger = HistoryLogger(output_dir=OUTPUT_PATH, prefix="large")
     checkpoint_manager = CheckpointManager()
@@ -164,8 +167,6 @@ def main():
         if start_epoch > 1:
             print(f"Resumed from epoch {start_epoch - 1}")
             print(f"Best Dice so far : {best_dice:.4f}\n")
-
-    max_epochs = EPOCHS
 
     print("Training...")
     for epoch in range(start_epoch, max_epochs + 1):
@@ -192,7 +193,7 @@ def main():
         ) / max(epoch - start_epoch + 1, 1)
         eta_seconds = max((max_epochs - epoch) * average_epoch_time, 0.0)
 
-        scheduler.step(validation_stats["dice"])
+        scheduler.step()
         history_logger.append(
             epoch=epoch,
             training_loss=training_loss,

@@ -192,8 +192,9 @@ def main():
     print(f"Validation Samples : {len(validation_loader.dataset)}\n")
 
     model = UNet().to(DEVICE)
-    optimizer = Adam(model.parameters(), lr=LEARNING_RATE)
-    criterion = BCEDiceLoss()
+    optimizer = torch.optim.AdamW(model.parameters(), lr=5e-4, weight_decay=1e-4)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS, eta_min=1e-6)
+    criterion = BCEDiceLoss(bce_weight=0.3, dice_weight=0.7)
     best_dice = float("-inf")
     checkpoint_file = CHECKPOINT_PATH / "best_model.pth"
     CHECKPOINT_PATH.mkdir(parents=True, exist_ok=True)
@@ -208,6 +209,7 @@ def main():
             criterion,
         )
         validation_dice, validation_iou = validate(model, validation_loader)
+        scheduler.step()
 
         print(f"Training Loss : {training_loss:.4f}")
         print(f"Validation Dice : {validation_dice:.4f}")

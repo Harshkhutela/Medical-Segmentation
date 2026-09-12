@@ -464,9 +464,17 @@ def inject_global_styles() -> None:
     )
 
 
+def safe_image(image, caption: str | None = None) -> None:
+    """Render image safely without deprecation warnings."""
+    try:
+        st.image(image, caption=caption, width="stretch")
+    except (TypeError, ValueError):
+        st.image(image, caption=caption, use_container_width=True)
+
+
 def render_sidebar_brand() -> None:
     """Render the professional branded sidebar."""
-    st.image(logo_image(), use_container_width=True)
+    safe_image(logo_image())
     st.markdown(
         f"""
         <div style="margin-top:0.8rem;">
@@ -1675,7 +1683,7 @@ def render_evaluation_page() -> None:
         for column, (title, plot_path) in zip(plot_columns, plot_paths):
             with column:
                 if plot_path.exists():
-                    st.image(str(plot_path), caption=title, use_container_width=True)
+                    safe_image(str(plot_path), caption=title)
                 else:
                     st.info(f"{title} plot is not available yet.")
 
@@ -1704,7 +1712,7 @@ def render_evaluation_page() -> None:
         else:
             st.dataframe(confusion_frame, use_container_width=True, hide_index=False)
     else:
-        st.image(str(confusion_matrix_path), use_container_width=True)
+        safe_image(str(confusion_matrix_path))
 
     render_section_header("📦 Other Artifacts")
     col_left, col_right = st.columns(2, gap="large")

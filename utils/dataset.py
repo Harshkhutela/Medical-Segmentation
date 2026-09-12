@@ -16,7 +16,7 @@ class MedicalSegmentationDataset(Dataset):
     and sample1.png, or sample1.jpg and sample1.png).
     """
 
-    def __init__(self, image_folder=None, mask_folder=None, image_size=None):
+    def __init__(self, image_folder=None, mask_folder=None, image_size=None, augment=False):
         """
         Initialize the dataset.
 
@@ -24,10 +24,12 @@ class MedicalSegmentationDataset(Dataset):
             image_folder: Optional path to the image directory.
             mask_folder: Optional path to the mask directory.
             image_size: Output size for both image and mask.
+            augment: Whether to apply online medical data augmentations.
         """
         self.image_folder = Path(image_folder) if image_folder is not None else IMAGE_FOLDER
         self.mask_folder = Path(mask_folder) if mask_folder is not None else MASK_FOLDER
         self.image_size = image_size if image_size is not None else IMAGE_SIZE
+        self.augment = augment
 
         # Build the list of matching image-mask pairs once at initialization.
         self.samples = self._build_samples()
@@ -122,41 +124,74 @@ class MedicalSegmentationDataset(Dataset):
             raise IndexError("Dataset index is out of range")
 
         image_path, mask_path = self.samples[index]
-        image_tensor = self._load_image(image_path)
-        mask_tensor = self._load_mask(mask_path)
+        image, mask = self._load_raw_pair(image_path, mask_path)
+
+        if self.augment:
+            image, mask = self._apply_augmentations(image, mask)
+
+        image_tensor = torch.from_numpy(image).permute(2, 0, 1)
+        mask_tensor = torch.from_numpy(mask.astype(np.float32))
         return image_tensor, mask_tensor
 
     def _load_image(self, image_path):
-        """
-        Read an image from disk, resize it, normalize it, and convert it to a tensor.
-        """
+        """Read an image from disk, resize it, normalize it, and convert it to a tensor."""
         image = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
         if image is None:
             raise FileNotFoundError(f"Unable to read image: {image_path}")
-
-        # OpenCV loads images in BGR order. Convert to RGB so matplotlib and PyTorch
-        # display the channels correctly.
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-        # Resize to the configured spatial size.
         image = cv2.resize(image, (self.image_size, self.image_size), interpolation=cv2.INTER_LINEAR)
-
-        # Convert to a floating-point tensor and normalize to [0, 1].
         image = image.astype(np.float32) / 255.0
-        image_tensor = torch.from_numpy(image).permute(2, 0, 1)
-        return image_tensor
+        return torch.from_numpy(image).permute(2, 0, 1)
 
     def _load_mask(self, mask_path):
-        """
-        Read a segmentation mask, resize it, convert it to grayscale, and convert it to a tensor.
-        """
+        """Read a segmentation mask, resize it, convert it to grayscale, and convert it to a tensor."""
         mask = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)
         if mask is None:
             raise FileNotFoundError(f"Unable to read mask: {mask_path}")
+        mask = cv2.resize(mask, (self.image_size, self.image_size), interpolation=cv2.INTER_NEAREST)
+        return torch.from_numpy(mask.astype(np.float32))
 
-        # Use nearest-neighbor interpolation for masks so label values remain intact.
+    def _load_raw_pair(self, image_path, mask_path):
+        """Load and resize image and mask to target size."""
+        image = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
+        if image is None:
+            raise FileNotFoundError(f"Unable to read image: {image_path}")
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image = cv2.resize(image, (self.image_size, self.image_size), interpolation=cv2.INTER_LINEAR)
+        image = image.astype(np.float32) / 255.0
+
+        mask = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)
+        if mask is None:
+            raise FileNotFoundError(f"Unable to read mask: {mask_path}")
         mask = cv2.resize(mask, (self.image_size, self.image_size), interpolation=cv2.INTER_NEAREST)
 
-        # Convert to a float tensor with shape (H, W).
-        mask_tensor = torch.from_numpy(mask.astype(np.float32))
-        return mask_tensor
+        return image, mask
+
+    def _apply_augmentations(self, image, mask):
+        """Apply random geometric and photometric augmentations."""
+        # Random horizontal flip
+        if np.random.rand() > 0.5:
+            image = np.fliplr(image)
+            mask = np.fliplr(mask)
+
+        # Random vertical flip
+        if np.random.rand() > 0.7:
+            image = np.flipud(image)
+            mask = np.flipud(mask)
+
+        # Random small rotation / affine (+-15 deg)
+        if np.random.rand() > 0.5:
+            angle = np.random.uniform(-15, 15)
+            center = (self.image_size // 2, self.image_size // 2)
+            rot_mat = cv2.getRotationMatrix2D(center, angle, scale=1.0)
+            image = cv2.warpAffine(image, rot_mat, (self.image_size, self.image_size), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+            mask = cv2.warpAffine(mask, rot_mat, (self.image_size, self.image_size), flags=cv2.INTER_NEAREST, borderMode=cv2.BORDER_REFLECT)
+
+        # Random contrast & brightness jitter
+        if np.random.rand() > 0.5:
+            contrast_factor = np.random.uniform(0.9, 1.1)
+            brightness_factor = np.random.uniform(-0.05, 0.05)
+            image = np.clip(image * contrast_factor + brightness_factor, 0.0, 1.0)
+
+        return image.copy(), mask.copy()
+

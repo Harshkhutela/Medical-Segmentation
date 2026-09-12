@@ -8,7 +8,7 @@ import pandas as pd
 import streamlit as st
 
 from benchmarking import BENCHMARK_PLOTS_DIR, load_benchmark_results, run_benchmark
-from .ui import info_tooltip, render_section_header
+from .ui import info_tooltip, render_section_header, safe_image
 
 
 def _format_metric(value: float | int | None) -> str:
@@ -127,9 +127,9 @@ def render_benchmark_page() -> None:
     for metric in ["dice", "iou", "precision", "recall", "f1"]:
         chart_path = BENCHMARK_PLOTS_DIR / f"{metric}_comparison.png"
         if chart_path.exists():
-            st.image(str(chart_path), caption=metric.upper(), use_container_width=True)
+            safe_image(str(chart_path), caption=metric.upper())
 
     table_path = BENCHMARK_PLOTS_DIR / "benchmark_table.png"
     if table_path.exists():
         render_section_header("Rendered Comparison Table")
-        st.image(str(table_path), use_container_width=True)
+        safe_image(str(table_path))
